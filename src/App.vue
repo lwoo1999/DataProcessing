@@ -37,62 +37,21 @@
   </b-form-row>
   <hr>
   <b-row>
-    <b-col lg=4 cols=12><h3>A 类不确定度：{{u_a}}</h3></b-col>
-    <b-col lg=4 cols=12><h3>B 类不确定度：{{u_b}}</h3></b-col>
-    <b-col lg=4 cols=12><h3>合成不确定度：{{u}}</h3></b-col>
+    <b-col lg=4 cols=12><p>A 类不确定度：{{u_a}}</p></b-col>
+    <b-col lg=4 cols=12><p>B 类不确定度：{{u_b}}</p></b-col>
+    <b-col lg=4 cols=12><p>合成不确定度：{{u}}</p></b-col>
   </b-row>
   <b-row>
-    <b-col><h2>{{mean}}±{{u}}</h2></b-col>
+    <b-col><p class="lead">{{mean}}±{{u}}</p></b-col>
   </b-row>
+  <div id="boxplot"></div>
 </b-container>
 </template>
 
 <script>
-import {statistic} from "numbers"
-
-const variance = (arr) => Math.pow(statistic.standardDev(arr), 2) * arr.length / (arr.length - 1)
-
-const t_p = {
-  "0.68": [
-    0, 0, 0, 1.32, 1.2, 1.14, 1.11, 1.09, 1.08, 1.07, 1.06
-  ],
-  "0.90": [
-    0, 0, 0, 2.92, 2.35, 2.13, 2.02, 1.94, 1.86, 1.83, 1.76
-  ],
-  "0.95": [
-    0, 0, 0, 4.3, 3.18, 2.78, 2.57, 2.46, 2.37, 2.31, 2.26
-  ],
-  "0.99": [
-    0, 0, 0, 9.93, 5.84, 4.6, 4.03, 3.71, 3.5, 3.36, 3.25
-  ]
-}
-
-const C = {
-  "正态分布": 3,
-  "均匀分布": Math.sqrt(3),
-  "三角分布": Math.sqrt(6)
-}
-
-const k_p = {
-  "正态分布": {
-    "0.68": 1,
-    "0.90": 1.65,
-    "0.95": 1.96,
-    "0.99": 2.58
-  },
-  "均匀分布": {
-    "0.68": 1.183,
-    "0.90": 1.559,
-    "0.95": 1.645,
-    "0.99": 1.715
-  },
-  "三角分布": {
-    "0.68": 1.064,
-    "0.90": 1.675,
-    "0.95": 1.901,
-    "0.99": 2.204
-  }
-}
+import {t_p, C, k_p} from "./scripts/data.js"
+import {mean, distance, variance, standardDeviation} from "./scripts/utils.js"
+import {boxplot} from "./scripts/plot.js"
 
 export default {
   data () {
@@ -110,13 +69,13 @@ export default {
       return Math.sqrt(variance(this.datas) / this.n) * t_p[this.p][this.n]
     },
     u_b () {
-      return k_p[this.distribution][this.p] * Math.sqrt(this.ub1 * this.ub1 + this.ub2 * this.ub2) * C[this.distribution]
+      return k_p[this.distribution][this.p] * distance(this.ub1, this.ub2) * C[this.distribution]
     },
     mean () {
-      return statistic.mean(this.datas)
+      return mean(this.datas)
     },
     u () {
-      return Math.sqrt(this.u_a * this.u_a + this.u_b * this.u_b)
+      return distance(this.u_a, this.u_b)
     }
   },
   methods: {
@@ -132,6 +91,9 @@ export default {
     handleDataChange (value, key) {
       let newData = parseFloat(value) || 0
       this.datas.splice(key, 1, newData)
+      if (this.datas.length >= 5) {
+        boxplot("boxplot", [...this.datas].sort((x, y) => x > y))
+      }
     },
     handleUb1Change (value) {
       let val = parseFloat(value) || 0
